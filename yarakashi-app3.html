@@ -284,7 +284,7 @@ updateClock();
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDSHMR5R-skFEOze7mwvuuunvdPozf3iOc",
@@ -299,8 +299,11 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
+// リダイレクト後の結果を処理（iOSのsignInWithRedirect対応）
+getRedirectResult(auth).catch(e => alert('ログインに失敗しました: ' + e.message));
+
 window.googleLogin = () => {
-  signInWithPopup(auth, provider).catch(e => alert('ログインに失敗しました: ' + e.message));
+  signInWithRedirect(auth, provider);
 };
 window.googleLogout = () => {
   signOut(auth);
