@@ -328,7 +328,7 @@ try {
         userPhoto.style.display = 'none';
       }
     } else {
-      loginScreen.style.display = 'flex';
+      // ゲストモードを維持：未ログインでもlogin-screenを強制表示しない
       userBar.style.display = 'none';
     }
   });
