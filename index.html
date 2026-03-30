@@ -281,6 +281,8 @@ function deleteRec(i){const list=getThisMonth().sort((a,b)=>b.date.localeCompare
 renderDrinkTypes();renderShopHistory();
 setInterval(()=>{updateClock();updateStay();},10000);
 updateClock();
+// login-screenを同期的に即時非表示（Firebaseより先に実行）
+document.getElementById('login-screen').style.display='none';
 </script>
 
 <script type="module">
