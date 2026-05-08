@@ -307,7 +307,7 @@ document.getElementById('memoInput').addEventListener('input',saveTonightState);
 // login-screenを同期的に即時非表示（Firebaseより先に実行）
 document.getElementById('login-screen').style.display='none';
 // DEBUGパネル：localStorageの全レコードを表示
-try{const keys=['yarakashi_v1','yarakashi_v2','yarakashi_v3','yarakashi_v4','yarakashi_v5'];const lines=keys.map(k=>{const raw=localStorage.getItem(k);if(!raw)return k+': なし';try{const d=JSON.parse(raw);const first=d[0]?` 先頭: date="${d[0].date}" shop="${d[0].shop||''}"`:' (空)';return k+': '+d.length+'件'+first;}catch(e){return k+': パースエラー';}});document.getElementById('debug-output').textContent=lines.join('\n');}catch(e){document.getElementById('debug-output').textContent='エラー: '+e.message;}
+try{const keys=['yarakashi_v1','yarakashi_v2','yarakashi_v3','yarakashi_v4','yarakashi_v5'];const lines=keys.map(k=>{const raw=localStorage.getItem(k);if(!raw)return k+': なし';try{const d=JSON.parse(raw);if(!d.length)return k+': 0件';return k+': '+d.length+'件\n'+d.map((r,i)=>`  [${i}] date="${r.date}" yarakashi=${r.yarakashi} shop="${r.shop||''}"`).join('\n');}catch(e){return k+': パースエラー';}});document.getElementById('debug-output').textContent=lines.join('\n\n');}catch(e){document.getElementById('debug-output').textContent='エラー: '+e.message;}
 </script>
 
 <script type="module">
