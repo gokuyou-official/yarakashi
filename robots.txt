@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://creative-kataifi-48adb2.netlify.app/sitemap.xml
