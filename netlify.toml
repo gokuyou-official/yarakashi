@@ -4,6 +4,8 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  # VAPID公開鍵とSupabaseのURLは、もともと画面側のコードに書いてある公開情報なので、秘密情報の検査から外す
+  SECRETS_SCAN_OMIT_KEYS = "VAPID_PUBLIC_KEY,SUPABASE_URL"
 
 [[headers]]
   for = "/*"
