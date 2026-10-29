@@ -28,7 +28,7 @@ function alarmMessage(stage, remaining, alarmMinutes) {
   }
   if (stage >= 10) return { title: `🚃 終電まであと${remaining}分`, body: "急いで。会計しよ。" };
   if (stage >= 5) return { title: `🚨 終電まであと${remaining}分！`, body: "今すぐ出て！！乗り遅れたらタクシー 🚕" };
-  if (stage >= 3) return { title: `🚨 あと${remaining}分！！走れ`, body: "グラス置いて。財布持って。今。" };
+  if (stage >= 3) return { title: `🚨 終電まであと${remaining}分`, body: "諦めたらそこで試合終了です。" };
   return { title: "😱 終電まであと1分", body: "…タクシー代いくらかな 🚕" };
 }
 
