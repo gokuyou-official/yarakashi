@@ -23,7 +23,7 @@ function alarmStages(alarmMinutes) {
 
 // 段階ごとの文面（アプリ画面の言い回しに合わせる）
 function alarmMessage(stage, remaining, alarmMinutes) {
-  const title = `🚃 終電まであと${remaining}分`;
+  const title = `${stage <= 5 ? "🚨" : "🚃"} 終電まであと${remaining}分`;
   if (stage === alarmMinutes && stage > 10) return { title, body: "そろそろ動いて！飲みすぎ注意 🍺" };
   if (stage >= 10) return { title, body: "急いで。会計しよ。" };
   if (stage >= 5) return { title, body: "今すぐ出て！！乗り遅れたらタクシー 🚕" };
