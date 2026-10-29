@@ -15,6 +15,23 @@ function getJSTMinutes() {
   return (h < 5 ? h + 24 : h) * 60 + m;
 }
 
+// 通知する段階（分前）。設定値より小さい 10・5・3・1 分前を足す
+function alarmStages(alarmMinutes) {
+  const list = [alarmMinutes, 10, 5, 3, 1].filter((m) => m > 0 && m <= alarmMinutes);
+  return [...new Set(list)].sort((x, y) => y - x);
+}
+
+// 段階ごとの文面（アプリ画面の言い回しに合わせる）
+function alarmMessage(stage, remaining, alarmMinutes) {
+  if (stage === alarmMinutes && stage > 10) {
+    return { title: `🚃 終電まで${remaining}分！`, body: "そろそろ動いて！飲みすぎ注意 🍺" };
+  }
+  if (stage >= 10) return { title: `🚃 終電まであと${remaining}分`, body: "急いで。会計しよ。" };
+  if (stage >= 5) return { title: `🚨 終電まであと${remaining}分！`, body: "今すぐ出て！！乗り遅れたらタクシー 🚕" };
+  if (stage >= 3) return { title: `🚨 あと${remaining}分！！走れ`, body: "グラス置いて。財布持って。今。" };
+  return { title: "😱 終電まであと1分", body: "…タクシー代いくらかな 🚕" };
+}
+
 export default async function handler() {
   // 環境変数チェック（値はログに出さない）
   if (!VAPID_PUBLIC || !VAPID_PRIVATE || !SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
@@ -27,7 +44,6 @@ export default async function handler() {
   const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
   const nowMin = getJSTMinutes();
   const twentyHoursAgo = new Date(Date.now() - 20 * 3600 * 1000).toISOString();
-  const FIVE = 5;
 
   // 終電セット済みのユーザーを取得
   const { data: states, error: fetchErr } = await sb
@@ -43,92 +59,48 @@ export default async function handler() {
   let sent = 0;
 
   for (const state of states ?? []) {
-    const {
-      user_id,
-      train_min,
-      alarm_minutes = 15,
-      push_alarm_sent_at,
-      push_alarm_sent_for,
-      push_5min_sent_at,
-      push_5min_sent_for,
-    } = state;
+    const { user_id, train_min, alarm_minutes = 15, push_alarm_sent_at, push_alarm_sent_for, push_5min_sent_for } = state;
 
     const remaining = train_min - nowMin;
-
-    // 終電まで0分以下（過ぎた）か、alarm_minutes+30分より先ならスキップ
     if (remaining <= 0 || remaining > alarm_minutes + 30) continue;
 
-    // 送信済み判定: train_minが一致 かつ 20時間以内に送信済み → スキップ
-    const alarmAlreadySent =
-      push_alarm_sent_for === train_min &&
-      push_alarm_sent_at &&
-      push_alarm_sent_at > twentyHoursAgo;
+    // 通知する段階：設定した分前 → 10分前 → 5分前 → 3分前 → 1分前
+    const stages = alarmStages(alarm_minutes);
+    // いま該当する段階（残り時間がその段階以下になった、いちばん小さい段階）
+    const target = [...stages].reverse().find((s) => remaining <= s);
+    if (target === undefined) continue;
 
-    const fiveMinAlreadySent =
-      push_5min_sent_for === train_min &&
-      push_5min_sent_at &&
-      push_5min_sent_at > twentyHoursAgo;
+    // 送信済みの段階は push_5min_sent_for に「最後に送った段階の分数」として記録する
+    const sameNight =
+      push_alarm_sent_for === train_min && push_alarm_sent_at && push_alarm_sent_at > twentyHoursAgo;
+    const lastStage = sameNight ? push_5min_sent_for : null;
+    if (lastStage != null && lastStage <= target) continue;
 
-    // alarm_minutes > 5 の場合: アラーム段階は remaining > 5 のときのみ
-    // alarm_minutes <= 5 の場合: 1段階のみ（remainingがalarm_minutes以下になったら送信）
-    const shouldSendAlarm =
-      !alarmAlreadySent &&
-      remaining <= alarm_minutes &&
-      remaining > (alarm_minutes > FIVE ? FIVE : 0);
-
-    const shouldSend5min =
-      !fiveMinAlreadySent &&
-      alarm_minutes > FIVE &&
-      remaining <= FIVE &&
-      remaining > 0;
-
-    if (!shouldSendAlarm && !shouldSend5min) continue;
-
-    // このユーザーのPush購読を取得
     const { data: subs, error: subErr } = await sb
       .from("push_subscriptions")
       .select("endpoint, p256dh, auth")
       .eq("user_id", user_id);
-
     if (subErr || !subs?.length) continue;
 
-    const title = shouldSend5min
-      ? `🚃 終電まであと${remaining}分！`
-      : `🚃 終電まで${remaining}分！`;
-    const body = shouldSend5min
-      ? "今すぐ出て！！乗り遅れたらタクシー 🚕"
-      : "そろそろ動いて！飲みすぎ注意 🍺";
+    const { title, body } = alarmMessage(target, remaining, alarm_minutes);
     const payload = JSON.stringify({ title, body });
 
     for (const sub of subs) {
-      const pushSub = {
-        endpoint: sub.endpoint,
-        keys: { p256dh: sub.p256dh, auth: sub.auth },
-      };
+      const pushSub = { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } };
       try {
         await webpush.sendNotification(pushSub, payload);
         sent++;
       } catch (err) {
-        // 410 / 404 は購読期限切れ → DBから削除
         if (err.statusCode === 410 || err.statusCode === 404) {
           await sb.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
         }
-        // エラーの詳細はログに残さない（鍵情報が含まれる可能性があるため）
       }
     }
 
-    // 送信済みフラグを更新
-    const now = new Date().toISOString();
-    const updates = {};
-    if (shouldSendAlarm) {
-      updates.push_alarm_sent_at = now;
-      updates.push_alarm_sent_for = train_min;
-    }
-    if (shouldSend5min) {
-      updates.push_5min_sent_at = now;
-      updates.push_5min_sent_for = train_min;
-    }
-    await sb.from("tonight_state").update(updates).eq("user_id", user_id);
+    await sb
+      .from("tonight_state")
+      .update({ push_alarm_sent_at: new Date().toISOString(), push_alarm_sent_for: train_min, push_5min_sent_for: target })
+      .eq("user_id", user_id);
   }
 
   console.log(`[send-alarms] done. sent=${sent} users=${states?.length ?? 0} nowMin=${nowMin}`);
