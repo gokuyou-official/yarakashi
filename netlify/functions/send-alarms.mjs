@@ -47,8 +47,10 @@ export default async function handler() {
   // 終電セット済みのユーザーを取得
   const { data: states, error: fetchErr } = await sb
     .from("tonight_state")
-    .select("user_id, train_min, alarm_minutes, push_alarm_sent_at, push_alarm_sent_for, push_5min_sent_at, push_5min_sent_for")
-    .eq("train_set", true);
+    .select("user_id, train_min, alarm_minutes, push_alarm_sent_at, push_alarm_sent_for, push_5min_sent_at, push_5min_sent_for, updated_at")
+    .eq("train_set", true)
+    // 前の晩にセットしたまま放置された終電は対象外（18時間以上更新がないもの）
+    .gt("updated_at", new Date(Date.now() - 18 * 3600 * 1000).toISOString());
 
   if (fetchErr) {
     console.error("[send-alarms] DB fetch error:", fetchErr.message);
