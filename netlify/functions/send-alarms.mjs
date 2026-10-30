@@ -25,7 +25,7 @@ function alarmStages(alarmMinutes) {
 function alarmMessage(stage, remaining, alarmMinutes) {
   const title = `${stage <= 5 ? "🚨" : "🚃"} 終電まであと${remaining}分`;
   if (stage === alarmMinutes && stage > 10) return { title, body: "そろそろ動いて！飲みすぎ注意 🍺" };
-  if (stage >= 10) return { title, body: "会計もたついたらダッシュね！🏃‍♂️💨" };
+  if (stage >= 10) return { title, body: "会計もたついたらダッシュ！🏃‍♂️💨" };
   if (stage >= 5) return { title, body: "今すぐ出て！！乗り遅れたらタクシー 🚕" };
   if (stage >= 3) return { title, body: "諦めたらそこで試合終了です。🏀" };
   return { title, body: "…タクシー代いくらかな 🚕" };
