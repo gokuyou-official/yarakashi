@@ -1,0 +1,15 @@
+import { createClient } from "@supabase/supabase-js";
+
+// 御供養の各ページから呼ばれる、閲覧数カウンター（ページのパスだけを記録する）
+export default async (req) => {
+  const headers = { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" };
+  try {
+    const url = new URL(req.url);
+    const p = (url.searchParams.get("p") || "/").slice(0, 200);
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+    await sb.from("page_views").insert({ user_agent: "gokuyou", referrer: "gokuyou:" + p });
+  } catch (e) {
+    // 失敗しても閲覧者には影響させない
+  }
+  return new Response(null, { status: 204, headers });
+};
