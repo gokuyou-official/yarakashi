@@ -28,7 +28,8 @@ export default async () => {
   out.yarakashi_recent = [];
   const kind = (ua = "") =>
     /HeadlessChrome|bot|crawl|spider|preview|facebookexternalhit|slurp/i.test(ua) ? "bot"
-    : /iPhone|iPad/.test(ua) ? "iPhone" : /Android/.test(ua) ? "Android" : "PC";
+    : /iPhone|iPad/.test(ua) ? "iPhone" : /Android/.test(ua) ? "Android"
+    : /CrOS/.test(ua) ? "Chromebook" : /Windows/.test(ua) ? "Windows" : /Macintosh/.test(ua) ? "Mac" : /Linux/.test(ua) ? "Linux" : "不明";
   out.excluded_bots = 0;
   for (const v of views || []) {
     if (kind(v.user_agent || "") === "bot") { out.excluded_bots++; continue; }
@@ -37,7 +38,7 @@ export default async () => {
       const ios = (ua.match(/OS (\d+)_/) || [])[1] || "";
       out.yarakashi_recent.push({
         at: new Date(new Date(v.visited_at).getTime() + 9 * 3600 * 1000).toISOString().slice(5, 16).replace("T", " "),
-        device: kind(ua) + (ios ? " iOS" + ios : ""),
+        device: kind(ua) + (ios ? " iOS" + ios : "") + ((ua.match(/(Edg|Chrome|Firefox|Version)\/(\d+)/) || [])[0] ? " " + (ua.match(/(Edg|Chrome|Firefox|Version)\/(\d+)/) || [])[0] : ""),
         from: v.referrer ? new URL(v.referrer).hostname : "直接",
       });
     }
