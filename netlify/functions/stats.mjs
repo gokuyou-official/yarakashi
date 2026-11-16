@@ -13,6 +13,7 @@ export default async () => {
     .from("page_views")
     .select("visited_at, user_agent, referrer")
     .gte("visited_at", since)
+    .order("visited_at", { ascending: false })
     .limit(100000);
 
   const weeks = () => [0, 0, 0, 0];
@@ -24,7 +25,20 @@ export default async () => {
     gokuyou_today: 0,
   };
   const todayStart = new Date(new Date(now + 9 * 3600 * 1000).toISOString().slice(0, 10) + "T00:00:00+09:00").getTime();
+  out.yarakashi_recent = [];
+  const kind = (ua = "") =>
+    /bot|crawl|spider|preview|facebookexternalhit|slurp/i.test(ua) ? "bot"
+    : /iPhone|iPad/.test(ua) ? "iPhone" : /Android/.test(ua) ? "Android" : "PC";
   for (const v of views || []) {
+    if (!(v.referrer || "").startsWith("gokuyou:") && out.yarakashi_recent.length < 40) {
+      const ua = v.user_agent || "";
+      const ios = (ua.match(/OS (\d+)_/) || [])[1] || "";
+      out.yarakashi_recent.push({
+        at: new Date(new Date(v.visited_at).getTime() + 9 * 3600 * 1000).toISOString().slice(5, 16).replace("T", " "),
+        device: kind(ua) + (ios ? " iOS" + ios : ""),
+        from: v.referrer ? new URL(v.referrer).hostname : "直接",
+      });
+    }
     const t = new Date(v.visited_at).getTime();
     const w = Math.min(3, Math.floor((now - t) / (7 * day)));
     const isG = (v.referrer || "").startsWith("gokuyou:");
