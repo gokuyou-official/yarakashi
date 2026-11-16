@@ -27,9 +27,11 @@ export default async () => {
   const todayStart = new Date(new Date(now + 9 * 3600 * 1000).toISOString().slice(0, 10) + "T00:00:00+09:00").getTime();
   out.yarakashi_recent = [];
   const kind = (ua = "") =>
-    /bot|crawl|spider|preview|facebookexternalhit|slurp/i.test(ua) ? "bot"
+    /HeadlessChrome|bot|crawl|spider|preview|facebookexternalhit|slurp/i.test(ua) ? "bot"
     : /iPhone|iPad/.test(ua) ? "iPhone" : /Android/.test(ua) ? "Android" : "PC";
+  out.excluded_bots = 0;
   for (const v of views || []) {
+    if (kind(v.user_agent || "") === "bot") { out.excluded_bots++; continue; }
     if (!(v.referrer || "").startsWith("gokuyou:") && out.yarakashi_recent.length < 40) {
       const ua = v.user_agent || "";
       const ios = (ua.match(/OS (\d+)_/) || [])[1] || "";

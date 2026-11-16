@@ -7,8 +7,13 @@ export default async (req) => {
   try {
     const url = new URL(req.url);
     const p = (url.searchParams.get("p") || "/").slice(0, 200);
+    const ua = (req.headers.get("user-agent") || "").slice(0, 300);
+    // 自動の確認作業（画面を持たないブラウザ）や検索ロボットは数えない
+    if (/HeadlessChrome|bot|crawl|spider|preview/i.test(ua) || !p.startsWith("/gokuyou")) {
+      return new Response(null, { status: 204, headers });
+    }
     const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { realtime: { transport: ws } });
-    await sb.from("page_views").insert({ user_agent: "gokuyou", referrer: "gokuyou:" + p });
+    await sb.from("page_views").insert({ user_agent: ua, referrer: "gokuyou:" + p });
   } catch (e) {
     // 失敗しても閲覧者には影響させない
   }
