@@ -1,5 +1,6 @@
 import webpush from "web-push";
 import { createClient } from "@supabase/supabase-js";
+import ws from "ws";
 
 const VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY;
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY;
@@ -40,7 +41,7 @@ export default async function handler() {
 
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE);
 
-  const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+  const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, { realtime: { transport: ws } });
   const nowMin = getJSTMinutes();
   const twentyHoursAgo = new Date(Date.now() - 20 * 3600 * 1000).toISOString();
 

@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import ws from "ws";
 
 // 御供養の各ページから呼ばれる、閲覧数カウンター（ページのパスだけを記録する）
 export default async (req) => {
@@ -6,7 +7,7 @@ export default async (req) => {
   try {
     const url = new URL(req.url);
     const p = (url.searchParams.get("p") || "/").slice(0, 200);
-    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { realtime: { transport: ws } });
     await sb.from("page_views").insert({ user_agent: "gokuyou", referrer: "gokuyou:" + p });
   } catch (e) {
     // 失敗しても閲覧者には影響させない

@@ -1,9 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
+import ws from "ws";
 
 // 利用状況の集計（件数だけを返す。個人を特定する情報は返さない）
 export default async () => {
   try {
-  const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { realtime: { transport: ws } });
   const now = Date.now();
   const day = 24 * 3600 * 1000;
   const since = new Date(now - 28 * day).toISOString();
