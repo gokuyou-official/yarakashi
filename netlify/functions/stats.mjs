@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 
 // 利用状況の集計（件数だけを返す。個人を特定する情報は返さない）
 export default async () => {
+  try {
   const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
   const now = Date.now();
   const day = 24 * 3600 * 1000;
@@ -45,7 +46,15 @@ export default async () => {
   out.yarakashi_push_subscribers = await count("push_subscriptions");
   out.note = "週ごとの配列は 3週前→今週 の順";
 
-  return new Response(JSON.stringify(out), {
+  return json(out);
+  } catch (e) {
+    return json({ error: String(e && e.message || e) }, 500);
+  }
+};
+
+function json(obj, status = 200) {
+  return new Response(JSON.stringify(obj), {
+    status,
     headers: { "Content-Type": "application/json; charset=utf-8", "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" },
   });
-};
+}
