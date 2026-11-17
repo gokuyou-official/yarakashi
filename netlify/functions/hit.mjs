@@ -6,6 +6,13 @@ export default async (req) => {
   const headers = { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" };
   try {
     const url = new URL(req.url);
+    // 点検モード（?check=1）：記録はせず、接続設定があるかどうかだけを返す（値そのものは返さない）
+    if (url.searchParams.get("check") === "1") {
+      return new Response(JSON.stringify({ env: !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY) }), {
+        status: 200,
+        headers: { ...headers, "Content-Type": "application/json; charset=utf-8" },
+      });
+    }
     const p = (url.searchParams.get("p") || "/").slice(0, 200);
     const ua = (req.headers.get("user-agent") || "").slice(0, 300);
     // 自動の確認作業（画面を持たないブラウザ）や検索ロボットは数えない

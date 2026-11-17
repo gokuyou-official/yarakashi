@@ -31,15 +31,40 @@ export default async () => {
     : /iPhone|iPad/.test(ua) ? "iPhone" : /Android/.test(ua) ? "Android"
     : /CrOS/.test(ua) ? "Chromebook" : /Windows/.test(ua) ? "Windows" : /Macintosh/.test(ua) ? "Mac" : /Linux/.test(ua) ? "Linux" : "不明";
   out.excluded_bots = 0;
+  // 閲覧時に付けた判別情報（「||」以降。tz=タイムゾーン;lang=言語;scr=画面;vis=表示状態;hc=CPU数）を読み取る
+  const parseInfo = (raw = "") => {
+    const i = raw.indexOf("||");
+    if (i < 0) return { ua: raw, info: null };
+    const info = {};
+    for (const kv of raw.slice(i + 2).split(";")) {
+      const j = kv.indexOf("=");
+      if (j > 0) info[kv.slice(0, j).trim()] = kv.slice(j + 1).trim();
+    }
+    return { ua: raw.slice(0, i).trim(), info };
+  };
+  // やらかしの閲覧のうち「日本時間の端末」と「日本以外／判別情報なし（旧データ）」を別枠で数える
+  out.yarakashi_views_tokyo = weeks();
+  out.yarakashi_views_other_tz = weeks();
+  out.yarakashi_views_no_info = weeks();
+  out.yarakashi_today_tokyo = 0;
+  out.yarakashi_today_other_tz = 0;
+  out.yarakashi_today_no_info = 0;
   for (const v of views || []) {
-    if (kind(v.user_agent || "") === "bot") { out.excluded_bots++; continue; }
+    const { ua: baseUa, info } = parseInfo(v.user_agent || "");
+    if (kind(baseUa) === "bot") { out.excluded_bots++; continue; }
     if (!(v.referrer || "").startsWith("gokuyou:") && out.yarakashi_recent.length < 40) {
-      const ua = v.user_agent || "";
+      const ua = baseUa;
       const ios = (ua.match(/OS (\d+)_/) || [])[1] || "";
       out.yarakashi_recent.push({
         at: new Date(new Date(v.visited_at).getTime() + 9 * 3600 * 1000).toISOString().slice(5, 16).replace("T", " "),
         device: kind(ua) + (ios ? " iOS" + ios : "") + ((ua.match(/(Edg|Chrome|Firefox|Version)\/(\d+)/) || [])[0] ? " " + (ua.match(/(Edg|Chrome|Firefox|Version)\/(\d+)/) || [])[0] : ""),
         from: v.referrer ? new URL(v.referrer).hostname : "直接",
+        at_sec: new Date(new Date(v.visited_at).getTime() + 9 * 3600 * 1000).toISOString().slice(0, 19).replace("T", " "),
+        tz: info ? info.tz || "" : "情報なし",
+        lang: info ? info.lang || "" : "",
+        scr: info ? info.scr || "" : "",
+        vis: info ? info.vis || "" : "",
+        hc: info ? info.hc || "" : "",
       });
     }
     const t = new Date(v.visited_at).getTime();
@@ -47,6 +72,11 @@ export default async () => {
     const isG = (v.referrer || "").startsWith("gokuyou:");
     (isG ? out.gokuyou_views : out.yarakashi_views)[3 - w]++;
     if (t >= todayStart) isG ? out.gokuyou_today++ : out.yarakashi_today++;
+    if (!isG) {
+      const g = !info ? "no_info" : info.tz === "Asia/Tokyo" ? "tokyo" : "other_tz";
+      out["yarakashi_views_" + g][3 - w]++;
+      if (t >= todayStart) out["yarakashi_today_" + g]++;
+    }
     if (isG && now - t < 7 * day) {
       const p = v.referrer.slice(8);
       out.gokuyou_pages_7d[p] = (out.gokuyou_pages_7d[p] || 0) + 1;
